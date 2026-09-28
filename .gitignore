@@ -1,0 +1,6 @@
+﻿.env
+.vs
+labenv/
+__pycache__/
+*.pyc
+logs/

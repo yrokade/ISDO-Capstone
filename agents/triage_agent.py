@@ -117,6 +117,8 @@ def triage_ticket(ticket_number, short_description, description):
         }
     ]
 
+    classification = None  # returned to callers such as the C6 supervisor
+
     # Agentic loop
     while True:
         response = client.messages.create(
@@ -146,6 +148,7 @@ def triage_ticket(ticket_number, short_description, description):
                     result = handle_tool_call(block.name, block.input)
 
                     if block.name == "classify_ticket":
+                        classification = result
                         print(f"  → Category:    {result.get('category')}")
                         print(f"  → Priority:    {result.get('priority')}")
                         print(f"  → Assign To:   {result.get('assignment_group')}")
@@ -159,6 +162,10 @@ def triage_ticket(ticket_number, short_description, description):
                     })
 
             messages.append({"role": "user", "content": tool_results})
+        else:
+            break  # max_tokens or any other stop reason - don't loop forever
+
+    return classification
 
 # ── RUN ON SAMPLE TICKETS ─────────────────────────────────────────────────────
 

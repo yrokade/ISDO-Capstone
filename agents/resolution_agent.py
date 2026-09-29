@@ -190,6 +190,10 @@ def resolve_ticket(ticket_number, short_description, description, category):
         "content": f"Find a resolution for this ticket:\n\nTicket: {ticket_number}\nCategory: {category}\nSummary: {short_description}\nDetails: {description}"
     }]
 
+    # Collected for callers such as the C6 supervisor
+    outcome = {"ticket_number": ticket_number, "kb_article_used": "None", "resolution_text": "",
+               "auto_resolve": False, "confidence": "LOW", "top_score": 0.0}
+
     MAX_ROUNDS = 4  # hard safety cap: never loop forever if the model won't converge
     rounds = 0
     while True:
@@ -225,8 +229,13 @@ def resolve_ticket(ticket_number, short_description, description, category):
                         print(f"  → KB search: '{block.input.get('query')}'")
                         for art in result.get("articles", []):
                             print(f"     [{art['confidence_score']:.0%}] {art['article']}")
+                        scores = [a["confidence_score"] for a in result.get("articles", [])]
+                        outcome["top_score"] = max(scores + [outcome["top_score"]])
 
                     elif block.name == "draft_resolution":
+                        outcome.update({k: block.input[k] for k in
+                                        ("kb_article_used", "resolution_text", "auto_resolve", "confidence")
+                                        if k in block.input})
                         conf = block.input.get("confidence")
                         auto = block.input.get("auto_resolve")
                         print(f"\n  → Confidence: {conf}  |  Auto-resolve: {auto}")
@@ -243,6 +252,10 @@ def resolve_ticket(ticket_number, short_description, description, category):
                     })
 
             messages.append({"role": "user", "content": tool_results})
+        else:
+            break  # max_tokens or any other stop reason - don't loop forever
+
+    return outcome
 
 # ── RUN ON SAMPLE TICKETS ─────────────────────────────────────────────────────
 

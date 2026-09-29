@@ -94,10 +94,11 @@ def triage_node(state: TicketState) -> dict:
 def resolution_node(state: TicketState) -> dict:
     print(f"\n\u25b6 RESOLUTION AGENT \u2014 searching KB")
 
+    # resolve_ticket(ticket_number, short_description, description, category)
     result = resolution_agent.resolve_ticket(
         state["ticket_number"], state["short_description"], state["description"],
-        state["triage_category"], state["triage_priority"],
-    )
+        state["triage_category"],
+    ) or {}
 
     return {
         "kb_article": result.get("kb_article_used", "None"),
@@ -106,7 +107,7 @@ def resolution_node(state: TicketState) -> dict:
         "confidence": result.get("confidence", "LOW"),
         "audit_log": log("ResolutionAgent", "search_kb",
                           f"{result.get('kb_article_used', 'None')} - {result.get('confidence')} "
-                          f"({result.get('top_score', 0):.0%})"),
+                          f"({result.get('top_score') or 0:.0%})"),
     }
 
 
@@ -125,7 +126,7 @@ def sla_node(state: TicketState) -> dict:
         "sla_breach_risk": breach_risk,
         "escalation_required": escalation_required,
         "hitl_required": hitl_required,
-        "escalation_team": sla_agent.ESCALATION_TEAMS.get(state["triage_category"], "L2-Service-Desk"),
+        "escalation_team": sla_agent.escalation_team_for(state["triage_category"]),
         "audit_log": log("SLAAgent", "get_sla_status", f"{breach_risk} ({status.get('minutes_remaining')} min remaining)"),
     }
 
